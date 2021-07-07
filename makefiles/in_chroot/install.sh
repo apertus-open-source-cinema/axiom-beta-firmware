@@ -104,10 +104,18 @@ systemctl enable lighttpd
 # configure NetworkManager
 cp -f software/configs/Hotspot.nmconnection /etc/NetworkManager/system-connections/
 chmod 600 /etc/NetworkManager/system-connections/Hotspot.nmconnection
+cp -f software/configs/USB.nmconnection /etc/NetworkManager/system-connections/
+chmod 600 /etc/NetworkManager/system-connections/USB.nmconnection
 cp -f software/configs/iptables.sh /etc/NetworkManager/dispatcher.d/
 chmod 700 /etc/NetworkManager/dispatcher.d/iptables.sh
 cp -f software/configs/dnsmasq-shared-hosts.conf /etc/NetworkManager/dnsmasq-shared.d/hosts.conf
 systemctl enable NetworkManager
+
+# configure usb gadget networking (on the micro)
+cp software/configs/usb-gadget.service /etc/systemd/system/
+if [[ $DEVICE == 'micro' ]]; then
+    systemctl enable usb-gadget
+fi
 
 # build raw2dng
 cdmake software/misc-tools-utilities/raw2dng

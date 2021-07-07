@@ -1,0 +1,11 @@
+[Unit]
+Description=Setup USB gadget networking
+Requires=sys-kernel-config.mount NetworkManager.service
+After=NetworkManager.service
+
+[Service]
+ExecStart=/opt/axiom-firmware/software/configs/create_usb_gadget.sh
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
