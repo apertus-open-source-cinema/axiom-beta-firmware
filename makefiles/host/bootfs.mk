@@ -85,3 +85,98 @@ build/boot.fs/devicetree.dtb: boot/axiom-$(DEVICE)/devicetree.dts
 build/boot.fs/devicetree.dts: boot/axiom-$(DEVICE)/devicetree.dts
 	@mkdir -p $(@D)
 	cp $< $@
+
+ARM_SYSROOT = build/arm_sysroot
+
+$(ARM_SYSROOT):
+	mkdir -p $@
+
+UTIL_LINUX_VERSION = 2.35.2
+UTIL_LINUX_SOURCE = build/util-linux-$(UTIL_LINUX_VERSION)
+CURL = curl -L
+CROSS_SETUP = export CPP="arm-buildroot-linux-musleabihf-gcc -E" CC=arm-buildroot-linux-musleabihf-gcc RANLIB=arm-buildroot-linux-musleabihf-ranlib AR=arm-buildroot-linux-musleabihf-ar
+
+$(UTIL_LINUX_SOURCE):
+	rm -rf $@
+	(cd build; $(CURL) https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/v2.35/util-linux-$(UTIL_LINUX_VERSION).tar.xz | tar xJ)
+
+$(UTIL_LINUX_SOURCE)/.install_stamp: $(UTIL_LINUX_SOURCE) $(ARM_SYSROOT)
+	(cd $(@D); PKG_CONFIG=/root/armv7-eabihf--musl--bleeding-edge-2020.02-2/bin/pkg-config ./configure --host=arm-buildroot-linux-musleabihf --disable-shared --disable-backtrace --enable-static --disable-documentation --disable-all-programs --enable-libblkid --enable-libuuid --prefix=$$(realpath ../../$(ARM_SYSROOT)))
+	+$(MAKE) -C $(@D)
+	+$(MAKE) -C $(@D) install
+	touch $@
+
+LZO_VERSION = 2.10
+LZO_SOURCE = build/lzo-$(LZO_VERSION)
+
+$(LZO_SOURCE):
+	rm -rf $@
+	(cd build; $(CURL) http://www.oberhumer.com/opensource/lzo/download/lzo-$(LZO_VERSION).tar.gz | tar xz)
+
+$(LZO_SOURCE)/.install_stamp: $(LZO_SOURCE) $(ARM_SYSROOT)
+	(cd $(@D); $(CROSS_SETUP); ./configure --host arm-buildroot-linux --prefix=$$(realpath ../../$(ARM_SYSROOT)))
+	+$(MAKE) -C $(@D)
+	+$(MAKE) -C $(@D) install
+	touch $@
+
+
+ZSTD_VERSION = 1.4.5
+ZSTD_SOURCE = build/zstd-$(ZSTD_VERSION)
+
+$(ZSTD_SOURCE):
+	rm -rf $@
+	(cd build; $(CURL) https://github.com/facebook/zstd/releases/download/v$(ZSTD_VERSION)/zstd-$(ZSTD_VERSION).tar.gz | tar xz)
+
+$(ZSTD_SOURCE)/.install_stamp: $(ZSTD_SOURCE) $(ARM_SYSROOT)
+	+(cd $(@D); $(CROSS_SETUP); $(MAKE) PREFIX=$$(realpath ../../$(ARM_SYSROOT)) install)
+	touch $@
+
+
+ZLIB_VERSION = 1.2.11
+ZLIB_SOURCE = build/zlib-$(ZLIB_VERSION)
+
+$(ZLIB_SOURCE):
+	rm -rf $@
+	(cd build; $(CURL) https://zlib.net/zlib-$(ZLIB_VERSION).tar.gz | tar xz)
+
+$(ZLIB_SOURCE)/.install_stamp: $(ZLIB_SOURCE) $(ARM_SYSROOT)
+	+(cd $(@D); $(CROSS_SETUP); ./configure --static --prefix=$$(realpath ../../$(ARM_SYSROOT)); $(MAKE); $(MAKE) install)
+	touch $@
+
+
+BTRFS_PROGS_VERSION = v5.6.1
+BTRFS_PROGS_SOURCE = build/btrfs-progs-$(BTRFS_PROGS_VERSION).git
+
+$(BTRFS_PROGS_SOURCE):
+	rm -rf $@
+	git clone --branch $(BTRFS_PROGS_VERSION) --depth 1 git://git.kernel.org/pub/scm/linux/kernel/git/kdave/btrfs-progs.git $@
+
+$(BTRFS_PROGS_SOURCE)/.install_stamp: $(BTRFS_PROGS_SOURCE) $(ARM_SYSROOT) $(ZLIB_SOURCE)/.install_stamp $(ZSTD_SOURCE)/.install_stamp $(LZO_SOURCE)/.install_stamp $(UTIL_LINUX_SOURCE)/.install_stamp
+	(cd $(@D); ./autogen.sh; PKG_CONFIG_SYSROOT_DIR="/" CFLAGS=-I../../$(ARM_SYSROOT)/include LDFLAGS=-L../../$(ARM_SYSROOT)/lib PKG_CONFIG_PATH=$$(realpath ../../$(ARM_SYSROOT))/lib/pkgconfig PKG_CONFIG=/root/armv7-eabihf--musl--bleeding-edge-2020.02-2/bin/pkg-config ./configure --host=arm-buildroot-linux-musleabihf --disable-shared --disable-backtrace --enable-static --disable-documentation --disable-convert)
+	+$(MAKE) -C $(@D) static
+	touch $@
+
+INITRAMFS_SOURCE = build/initramfs
+
+BUSYBOX_VERSION = 1.31.1
+BUSYBOX_SOURCE = build/busybox-$(BUSYBOX_VERSION)
+
+$(BUSYBOX_SOURCE):
+	rm -rf $@
+	(cd build; $(CURL) https://busybox.net/downloads/busybox-$(BUSYBOX_VERSION).tar.bz2 | tar xj)
+
+$(BUSYBOX_SOURCE)/.install_stamp: $(BUSYBOX_SOURCE)
+	+$(MAKE) -C $(@D) ARCH=arm CROSS_COMPILE=arm-buildroot-linux-musleabihf- defconfig
+	sed -i 's/# CONFIG_STATIC is not set/CONFIG_STATIC=y/' $(BUSYBOX_SOURCE)/.config
+	+$(MAKE) -C $(@D) ARCH=arm CROSS_COMPILE=arm-buildroot-linux-musleabihf-
+	touch $@
+
+INITRAMFS_SOURCE = build/initramfs
+
+$(INITRAMFS_SOURCE)/.install_stamp: $(BTRFS_PROGS_SOURCE)/.install_stamp $(BUSYBOX_SOURCE)/.install_stamp
+	rm -rf $(@D)
+	mkdir -p $(@D)
+	cp $(BTRFS_PROGS_SOURCE)/btrfs.static $(@D)/btrfs
+	arm-buildroot-linux-musleabihf-strip $(@D)/btrfs
+	cp $(BUSYBOX_SOURCE)/busybox $(@D)/busybox
+	touch $@

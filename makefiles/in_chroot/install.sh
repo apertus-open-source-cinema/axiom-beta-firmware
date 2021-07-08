@@ -175,8 +175,8 @@ echo "$(tput setaf 1)This device and its software is provided without warranty o
 echo "" >> /etc/motd
 
 # generate fstab
-echo "PARTUUID=f37043ff-02 /     ext4 defaults,rw 0 0"  > /etc/fstab
-echo "PARTUUID=f37043ff-01 /boot vfat defaults,rw 0 0" >> /etc/fstab
+echo "PARTUUID=f37043ff-02 /     btrfs defaults,rw,subvol=@user 0 0"  > /etc/fstab
+echo "PARTUUID=f37043ff-01 /boot vfat  defaults,rw              0 0" >> /etc/fstab
 
 # Generate file list for integrity check
 VERIFY_DIRECTORIES="/etc /usr /opt"

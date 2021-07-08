@@ -1,4 +1,4 @@
-bootargs=console=ttyPS0,115200n8 root=PARTUUID=f37043ff-02 rw rootfstype=ext4 rootwait systemd.log_level=warning loglevel=7 systemd.log_target=console kernel.sysrq=1 init=/usr/lib/systemd/systemd sdhci.debug_quirks=64 kernel.sysrq=1 audit=0
+bootargs=console=ttyPS0,115200n8 root=PARTUUID=f37043ff-02 rw rootfstype=btrfs rootflags=subvol=@user rootwait systemd.log_level=warning loglevel=7 systemd.log_target=console kernel.sysrq=1 init=/usr/lib/systemd/systemd sdhci.debug_quirks=64 kernel.sysrq=1 audit=0
 bootcmd=fatload mmc 0 0x3000000 zImage; fatload mmc 0 0x2A00000 devicetree.dtb;fdt addr 0x2A00000; fdt resize; fdt rsvmem add 0x18000000 0x08000000; fdt rsvmem print; fdt print /chosen bootargs; bootz 0x3000000 - 0x2A00000
 ethaddr=00:0a:35:00:01:31
 bootdelay=0

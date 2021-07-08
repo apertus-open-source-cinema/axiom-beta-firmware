@@ -2,7 +2,7 @@
 puts stdout "starting qemu!\n\n"
 set timeout 300
 
-spawn $env(QEMU_SOURCE)/aarch64-softmmu/qemu-system-aarch64 -M arm-generic-fdt-7series -serial /dev/null -serial mon:stdio -nographic -dtb build/boot.fs/devicetree.dtb -drive if=sd,format=raw,index=0,file=build/$env(IMAGE) -kernel build/boot.fs/zImage -append {'console=ttyPS0,115200n8 root=PARTUUID=f37043ff-02 rw rootfstype=ext4 rootwait systemd.log_level=warning loglevel=7 systemd.log_target=console kernel.sysrq=1 init=/usr/lib/systemd/systemd sdhci.debug_quirks=64 kernel.sysrq=1'}
+spawn $env(QEMU_SOURCE)/aarch64-softmmu/qemu-system-aarch64 -M arm-generic-fdt-7series -serial /dev/null -serial mon:stdio -nographic -dtb build/boot.fs/devicetree.dtb -drive if=sd,format=raw,index=0,file=build/$env(IMAGE) -kernel build/boot.fs/zImage -append {'console=ttyPS0,115200n8 root=PARTUUID=f37043ff-02 rw rootfstype=btrfs rootflags=subvol=@user rootwait systemd.log_level=warning loglevel=7 systemd.log_target=console kernel.sysrq=1 init=/usr/lib/systemd/systemd sdhci.debug_quirks=64 kernel.sysrq=1'}
 expect {
     "$env(DEVICE) login:" { }
     timeout { puts "\ntimed out while waiting for login prompt\n"; exit 1 }

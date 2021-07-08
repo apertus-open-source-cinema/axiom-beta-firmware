@@ -43,4 +43,11 @@ build/boot.part: build/boot.fs/.install_stamp
 build/root.part: build/root.fs/.install_stamp
 	rm -f build/root.part
 	fallocate -l $(ROOTSIZE) build/root.part
-	mkfs.ext4 -d build/root.fs build/root.part
+	mkfs.btrfs build/root.part
+	mkdir -p build/root_mount
+	mount build/root.part build/root_mount
+	btrfs subvolume create build/root_mount/@golden
+	rsync -a build/root.fs/ build/root_mount/@golden/
+	btrfs property set build/root_mount/@golden ro true
+	btrfs subvolume snapshot build/root_mount/@golden build/root_mount/@user
+	umount build/root_mount
